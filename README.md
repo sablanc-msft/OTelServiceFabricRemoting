@@ -1,1 +1,1 @@
-# OTelServiceFabricRemoting
+# OpenTelemetry.Instrumentation.ServiceFabricRemoting
