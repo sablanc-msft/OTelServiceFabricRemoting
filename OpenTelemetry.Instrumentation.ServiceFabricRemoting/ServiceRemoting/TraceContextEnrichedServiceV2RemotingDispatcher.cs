@@ -36,19 +36,27 @@ namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
         //     of the task is the response for the received request.
         public override async Task<IServiceRemotingResponseMessage> HandleRequestResponseAsync(IServiceRemotingRequestContext requestContext, IServiceRemotingRequestMessage requestMessage)
         {
-            IServiceRemotingRequestMessageHeader requestMessageHeader = requestMessage?.GetHeader();
-
-            // Extract the PropagationContext of the upstream parent from the message headers.
-            PropagationContext parentContext = Propagator.Extract(default, requestMessageHeader, this.ExtractTraceContextFromRequestMessageHeader);
-            Baggage.Current = parentContext.Baggage;
-
-            string activityName = requestMessageHeader?.MethodName ?? "IncomingRequest";
-
-            using (Activity activity = OTelConstants.ActivitySource.StartActivity(activityName, ActivityKind.Server, parentContext.ActivityContext))
+            if (ServiceFabricRemotingActivitySource.Options?.Filter?.Invoke(requestMessage) == false)
             {
-                IServiceRemotingResponseMessage responseMessage = await base.HandleRequestResponseAsync(requestContext, requestMessage);
+                //If we filter out the request we don't need to process anything related to the activity
+                return await base.HandleRequestResponseAsync(requestContext, requestMessage).ConfigureAwait(false);
+            }
+            else
+            {
+                IServiceRemotingRequestMessageHeader requestMessageHeader = requestMessage?.GetHeader();
 
-                return responseMessage;
+                // Extract the PropagationContext of the upstream parent from the message headers.
+                PropagationContext parentContext = Propagator.Extract(default, requestMessageHeader, this.ExtractTraceContextFromRequestMessageHeader);
+                Baggage.Current = parentContext.Baggage;
+
+                string activityName = requestMessageHeader?.MethodName ?? ServiceFabricRemotingActivitySource.IncomingRequestActivityName;
+
+                using (Activity activity = ServiceFabricRemotingActivitySource.ActivitySource.StartActivity(activityName, ActivityKind.Server, parentContext.ActivityContext))
+                {
+                    IServiceRemotingResponseMessage responseMessage = await base.HandleRequestResponseAsync(requestContext, requestMessage).ConfigureAwait(false);
+
+                    return responseMessage;
+                }
             }
         }
 
