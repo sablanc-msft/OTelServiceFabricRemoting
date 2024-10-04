@@ -1,11 +1,12 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Fabric;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Remoting.V2;
 using Microsoft.ServiceFabric.Services.Remoting.V2.Client;
-using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
+using OpenTelemetry.Trace;
 
 namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
 {
@@ -43,29 +44,85 @@ namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
             set { this.InnerClient.Endpoint = value; }
         }
 
-        public Task<IServiceRemotingResponseMessage> RequestResponseAsync(IServiceRemotingRequestMessage requestMessage)
+        public async Task<IServiceRemotingResponseMessage> RequestResponseAsync(IServiceRemotingRequestMessage requestMessage)
         {
-            IServiceRemotingRequestMessageHeader requestMessageHeader = requestMessage?.GetHeader();
-            string activityName = requestMessageHeader?.MethodName ?? "OutgoingRequest";
-
-            using (Activity activity = OTelConstants.ActivitySource.StartActivity(activityName, ActivityKind.Client))
+            if (ServiceFabricRemotingActivitySource.Options?.Filter?.Invoke(requestMessage) == false)
             {
-                // Depending on Sampling (and whether a listener is registered or not), the activity above may not be created.
-                // If it is created, then propagate its context. If it is not created, then propagate the Current context, if any.
-                ActivityContext contextToInject = default;
-                if (activity != null)
-                {
-                    contextToInject = activity.Context;
-                }
-                else if (Activity.Current != null)
-                {
-                    contextToInject = Activity.Current.Context;
-                }
+                //If we filter out the request we don't need to process anything related to the activity
+                return await this.innerClient.RequestResponseAsync(requestMessage).ConfigureAwait(false);
+            }
+            else
+            {
+                IServiceRemotingRequestMessageHeader requestMessageHeader = requestMessage?.GetHeader();
+                string activityName = requestMessageHeader?.MethodName ?? ServiceFabricRemotingActivitySource.OutgoingRequestActivityName;
 
-                // Inject the ActivityContext into the message headers to propagate trace context to the receiving service.
-                Propagator.Inject(new PropagationContext(contextToInject, Baggage.Current), requestMessageHeader, this.InjectTraceContextIntoServiceRemotingRequestMessageHeader);
+                using (Activity activity = ServiceFabricRemotingActivitySource.ActivitySource.StartActivity(activityName, ActivityKind.Client))
+                {
+                    // Depending on Sampling (and whether a listener is registered or not), the activity above may not be created.
+                    // If it is created, then propagate its context.
+                    if (activity != null)
+                    {
+                        try
+                        {
+                            ServiceFabricRemotingActivitySource.Options?.EnrichAtClientFromRequest?.Invoke(activity, requestMessage);
+                        }
+                        catch (Exception)
+                        {
+                            //TODO: Log error
+                        }
 
-                return this.innerClient.RequestResponseAsync(requestMessage);
+                        try
+                        {
+                            // Inject the ActivityContext into the message headers to propagate trace context and Baggage to the receiving service.
+                            Propagator.Inject(new PropagationContext(activity.Context, Baggage.Current), requestMessageHeader, this.InjectTraceContextIntoServiceRemotingRequestMessageHeader);
+                        }
+                        catch (Exception ex)
+                        {
+                            activity.SetStatus(ActivityStatusCode.Error, $"Error trying to inject the context in the remoting request: '{ex.Message}'");
+                        }
+                    }
+
+                    try
+                    {
+                        IServiceRemotingResponseMessage responseMessage = await this.innerClient.RequestResponseAsync(requestMessage).ConfigureAwait(false);
+
+                        if (activity != null)
+                        {
+                            try
+                            {
+                                ServiceFabricRemotingActivitySource.Options?.EnrichAtClientFromResponse?.Invoke(activity, responseMessage, /* exception */ null);
+                            }
+                            catch (Exception)
+                            {
+                                //TODO: Log error
+                            }
+                        }
+
+                        return responseMessage;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (activity != null)
+                        {
+                            activity.SetStatus(Status.Error);
+
+                            if (ServiceFabricRemotingActivitySource.Options?.RecordException == true)
+                            {
+                                activity.RecordException(ex);
+                            }
+
+                            try
+                            {
+                                ServiceFabricRemotingActivitySource.Options?.EnrichAtClientFromResponse?.Invoke(activity, null, ex);
+                            }
+                            catch (Exception)
+                            {
+                                //TODO: Log error
+                            }
+                        }
+                        throw;
+                    }
+                }
             }
         }
 
