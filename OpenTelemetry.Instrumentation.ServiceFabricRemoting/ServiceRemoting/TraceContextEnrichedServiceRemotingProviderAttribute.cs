@@ -17,8 +17,8 @@ namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
 
         public TraceContextEnrichedServiceRemotingProviderAttribute()
         {
-            this.RemotingClientVersion = ServiceFabric.Services.Remoting.RemotingClientVersion.V2;
-            this.RemotingListenerVersion = ServiceFabric.Services.Remoting.RemotingListenerVersion.V2;
+            this.RemotingClientVersion = Microsoft.ServiceFabric.Services.Remoting.RemotingClientVersion.V2;
+            this.RemotingListenerVersion = Microsoft.ServiceFabric.Services.Remoting.RemotingListenerVersion.V2;
         }
 
         // Summary:
