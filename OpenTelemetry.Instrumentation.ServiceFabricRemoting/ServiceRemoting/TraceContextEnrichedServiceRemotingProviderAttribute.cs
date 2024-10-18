@@ -79,24 +79,24 @@ namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
             return listenerSettings;
         }
 
-        private long GetAndValidateMaxMessageSize(long maxMessageSize)
+        private long GetAndValidateMaxMessageSize(long maxMessageSizeDefault)
         {
-            return (this.MaxMessageSize > 0) ? this.MaxMessageSize : maxMessageSize;
+            return (this.MaxMessageSize > 0) ? this.MaxMessageSize : maxMessageSizeDefault;
         }
 
-        private TimeSpan GetAndValidateOperationTimeout(TimeSpan operationTimeout)
+        private TimeSpan GetAndValidateOperationTimeout(TimeSpan operationTimeoutDefault)
         {
-            return (this.OperationTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.OperationTimeoutInSeconds) : operationTimeout;
+            return (this.OperationTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.OperationTimeoutInSeconds) : operationTimeoutDefault;
         }
 
-        private TimeSpan GetAndValidateKeepAliveTimeout(TimeSpan keepAliveTimeout)
+        private TimeSpan GetAndValidateKeepAliveTimeout(TimeSpan keepAliveTimeoutDefault)
         {
-            return (this.KeepAliveTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.KeepAliveTimeoutInSeconds) : keepAliveTimeout;
+            return (this.KeepAliveTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.KeepAliveTimeoutInSeconds) : keepAliveTimeoutDefault;
         }
 
-        private TimeSpan GetConnectTimeout(TimeSpan connectTimeout)
+        private TimeSpan GetConnectTimeout(TimeSpan connectTimeoutDefault)
         {
-            return (this.ConnectTimeoutInMilliseconds > 0) ? TimeSpan.FromMilliseconds(this.ConnectTimeoutInMilliseconds) : connectTimeout;
+            return (this.ConnectTimeoutInMilliseconds > 0) ? TimeSpan.FromMilliseconds(this.ConnectTimeoutInMilliseconds) : connectTimeoutDefault;
         }
     }
 }
