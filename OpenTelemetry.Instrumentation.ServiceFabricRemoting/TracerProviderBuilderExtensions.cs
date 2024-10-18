@@ -26,8 +26,6 @@ namespace OpenTelemetry.Trace
         /// <returns>The instance of <see cref="TracerProviderBuilder"/> to chain the calls.</returns>
         public static TracerProviderBuilder AddServiceFabricRemotingInstrumentation(this TracerProviderBuilder tracerProviderBuilder, Action<ServiceFabricRemotingInstrumentationOptions> configure)
         {
-            Debug.Assert(configure != null, "configure was null");
-
             return tracerProviderBuilder.ConfigureServices(services =>
             {
                 if (configure != null)

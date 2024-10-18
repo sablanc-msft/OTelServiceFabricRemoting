@@ -52,8 +52,8 @@ namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
         {
             FabricTransportRemotingSettings settings = new FabricTransportRemotingSettings();
             settings.MaxMessageSize = this.GetAndValidateMaxMessageSize(settings.MaxMessageSize);
-            settings.OperationTimeout = this.GetandValidateOperationTimeout(settings.OperationTimeout);
-            settings.KeepAliveTimeout = this.GetandValidateKeepAliveTimeout(settings.KeepAliveTimeout);
+            settings.OperationTimeout = this.GetAndValidateOperationTimeout(settings.OperationTimeout);
+            settings.KeepAliveTimeout = this.GetAndValidateKeepAliveTimeout(settings.KeepAliveTimeout);
             settings.ConnectTimeout = this.GetConnectTimeout(settings.ConnectTimeout);
 
             return new TraceContextEnrichedActorRemotingClientFactory(settings, callbackMessageHandler);
@@ -61,16 +61,16 @@ namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
 
         private FabricTransportRemotingListenerSettings InitializeListenerSettings(ActorService actorService)
         {
-            FabricTransportRemotingListenerSettings listenerSettings = GetActorListenerSettings(actorService);
+            FabricTransportRemotingListenerSettings listenerSettings = this.GetActorListenerSettings(actorService);
 
             listenerSettings.MaxMessageSize = this.GetAndValidateMaxMessageSize(listenerSettings.MaxMessageSize);
-            listenerSettings.OperationTimeout = this.GetandValidateOperationTimeout(listenerSettings.OperationTimeout);
-            listenerSettings.KeepAliveTimeout = this.GetandValidateKeepAliveTimeout(listenerSettings.KeepAliveTimeout);
+            listenerSettings.OperationTimeout = this.GetAndValidateOperationTimeout(listenerSettings.OperationTimeout);
+            listenerSettings.KeepAliveTimeout = this.GetAndValidateKeepAliveTimeout(listenerSettings.KeepAliveTimeout);
 
             return listenerSettings;
         }
 
-        internal static FabricTransportRemotingListenerSettings GetActorListenerSettings(ActorService actorService)
+        private FabricTransportRemotingListenerSettings GetActorListenerSettings(ActorService actorService)
         {
             string sectionName = ActorNameFormat.GetFabricServiceTransportSettingsSectionName(actorService.ActorTypeInformation.ImplementationType);
 
@@ -83,24 +83,24 @@ namespace OpenTelemetry.Instrumentation.ServiceFabricRemoting
             return listenerSettings;
         }
 
-        private long GetAndValidateMaxMessageSize(long maxMessageSize)
+        private long GetAndValidateMaxMessageSize(long maxMessageSizeDefault)
         {
-            return (this.MaxMessageSize > 0) ? this.MaxMessageSize : maxMessageSize;
+            return (this.MaxMessageSize > 0) ? this.MaxMessageSize : maxMessageSizeDefault;
         }
 
-        private TimeSpan GetandValidateOperationTimeout(TimeSpan operationTimeout)
+        private TimeSpan GetAndValidateOperationTimeout(TimeSpan operationTimeoutDefault)
         {
-            return (this.OperationTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.OperationTimeoutInSeconds) : operationTimeout;
+            return (this.OperationTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.OperationTimeoutInSeconds) : operationTimeoutDefault;
         }
 
-        private TimeSpan GetandValidateKeepAliveTimeout(TimeSpan keepAliveTimeout)
+        private TimeSpan GetAndValidateKeepAliveTimeout(TimeSpan keepAliveTimeoutDefault)
         {
-            return (this.KeepAliveTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.KeepAliveTimeoutInSeconds) : keepAliveTimeout;
+            return (this.KeepAliveTimeoutInSeconds > 0) ? TimeSpan.FromSeconds(this.KeepAliveTimeoutInSeconds) : keepAliveTimeoutDefault;
         }
 
-        private TimeSpan GetConnectTimeout(TimeSpan connectTimeout)
+        private TimeSpan GetConnectTimeout(TimeSpan connectTimeoutDefault)
         {
-            return (this.ConnectTimeoutInMilliseconds > 0) ? TimeSpan.FromMilliseconds(this.ConnectTimeoutInMilliseconds) : connectTimeout;
+            return (this.ConnectTimeoutInMilliseconds > 0) ? TimeSpan.FromMilliseconds(this.ConnectTimeoutInMilliseconds) : connectTimeoutDefault;
         }
     }
 }
